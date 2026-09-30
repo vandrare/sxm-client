@@ -61,3 +61,15 @@ enable timed out at default 2s during shell reload but did enable the widget;
 installer now requests a 20s IPC timeout. Avoid mistaking sandbox isolation
 for a stopped desktop shell. Quickshell logs contain unrelated existing plugin
 warnings; filter for local.siriusxm. No subagent delegation authorized.
+
+## UI updates — 2026-09-30
+
+- Hold the bar widget width steady while its popup is open so changing channels
+  or receiving a new song title cannot move the popup horizontally.
+- Use shared compact caption-sized buttons for Account, About, Close, Pause/Resume
+  and Stop; Account/About have matching widths and mutually exclusive toggles.
+- About view displays `From: The Rathole` and `By: Vandrare`.
+- Updated source Widget.qml and installed copy; manifest/QML syntax checks passed.
+- Desktop runtime loaded without plugin QML errors. A full `omarchy restart shell`
+  was needed because plugin rescans retained cached QML; playback stops on restart.
+- User requested committing and pushing these UI changes to GitHub.

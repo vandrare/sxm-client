@@ -12,7 +12,19 @@ Ui.BarWidget {
     property bool opened: false
     property bool favoritesOnly: false
     property bool accountOpen: false
-    function open() { opened = true }
+    property bool aboutOpen: false
+    property real openBarWidth: 0
+    function open() {
+        if (opened) return
+        openBarWidth = width
+        opened = true
+    }
+    component CompactButton: Ui.Button {
+        fontSize: Style.font.caption
+        verticalPadding: Style.space(2)
+        horizontalPadding: Style.space(8)
+        focusable: true
+    }
     function close() { opened = false; password.text = "" }
     function closeForPopoutSwitch() { close() }
     function send(data) { if (service) service.send(data) }
@@ -28,12 +40,13 @@ Ui.BarWidget {
                 && (!needle || (c.number + " " + c.name).toLowerCase().indexOf(needle) >= 0)
         })
     }
-    implicitWidth: bar && bar.vertical ? barSize : Math.min(220, label.implicitWidth + 24)
+    // Song changes must not resize the popup's anchor during interaction.
+    implicitWidth: opened ? openBarWidth : (bar && bar.vertical ? barSize : Math.min(220, label.implicitWidth + 24))
     implicitHeight: barSize
     Text {
         id: label
         anchors.centerIn: parent
-        width: Math.min(196, implicitWidth)
+        width: Math.max(0, Math.min(root.width - 24, implicitWidth))
         text: root.bar && root.bar.vertical ? "󰐊" : (root.state.playing ? "󰐊 " + (root.state.title || "SiriusXM") : "󰐊 SXM")
         textFormat: Text.PlainText
         elide: Text.ElideRight
@@ -57,7 +70,7 @@ Ui.BarWidget {
         open: root.opened
         contentWidth: fittedContentWidth(440)
         contentHeight: fittedContentHeight(root.state.connected ? 620 : 410)
-        focusTarget: root.state.connected ? search : username
+        focusTarget: root.aboutOpen ? aboutButton : root.state.connected ? search : username
 
         ColumnLayout {
             anchors.fill: parent
@@ -65,9 +78,22 @@ Ui.BarWidget {
             Keys.onEscapePressed: root.close()
             RowLayout {
                 Layout.fillWidth: true
-                Text { text: "SiriusXM"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 22; font.bold: true; Layout.fillWidth: true }
-                Ui.Button { text: "Account"; visible: !!root.state.connected; focusable: true; onClicked: root.accountOpen = !root.accountOpen }
-                Ui.Button { text: "×"; focusable: true; onClicked: root.close() }
+                Text { text: "SiriusXM"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 22; font.bold: true; Layout.fillWidth: true; Layout.minimumWidth: implicitWidth }
+                CompactButton {
+                    text: "Account"
+                    Layout.preferredWidth: 82
+                    visible: !!root.state.connected
+                    selected: root.accountOpen
+                    onClicked: { root.accountOpen = !root.accountOpen; root.aboutOpen = false }
+                }
+                CompactButton {
+                    id: aboutButton
+                    text: "About"
+                    Layout.preferredWidth: 82
+                    selected: root.aboutOpen
+                    onClicked: { root.aboutOpen = !root.aboutOpen; root.accountOpen = false }
+                }
+                CompactButton { text: "×"; onClicked: root.close() }
             }
             Text {
                 Layout.fillWidth: true
@@ -92,7 +118,7 @@ Ui.BarWidget {
                 onClicked: root.service.restart()
             }
             ColumnLayout {
-                visible: !root.state.connected
+                visible: !root.state.connected && !root.aboutOpen
                 Layout.fillWidth: true
                 spacing: 10
                 Ui.TextField { id: username; Layout.fillWidth: true; placeholderText: "Username or email"; text: root.state.username || ""; enabled: !root.state.busy }
@@ -106,20 +132,20 @@ Ui.BarWidget {
                 }
             }
             RowLayout {
-                visible: root.accountOpen && !!root.state.connected
+                visible: root.accountOpen && !!root.state.connected && !root.aboutOpen
                 Ui.Button { text: "Sign out"; focusable: true; onClicked: root.send({op: "logout"}) }
                 Ui.Button { text: "Forget account"; focusable: true; onClicked: root.send({op: "forget"}) }
             }
             ColumnLayout {
-                visible: !!root.state.connected
+                visible: !!root.state.connected && !root.aboutOpen
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 10
                 Text { Layout.fillWidth: true; text: root.state.title || "Choose a channel"; textFormat: Text.PlainText; wrapMode: Text.Wrap; color: Color.foreground; font.pixelSize: 19; font.bold: true }
                 Text { Layout.fillWidth: true; text: root.state.artist || ""; textFormat: Text.PlainText; elide: Text.ElideRight; color: Color.muted; font.pixelSize: Style.font.body }
                 RowLayout {
-                    Ui.Button { text: root.state.paused ? "Resume" : "Pause"; focusable: true; enabled: !!root.state.playing; onClicked: root.send({op: "pause"}) }
-                    Ui.Button { text: "Stop"; focusable: true; enabled: !!root.state.playing; onClicked: root.send({op: "stop"}) }
+                    CompactButton { text: root.state.paused ? "Resume" : "Pause"; enabled: !!root.state.playing; onClicked: root.send({op: "pause"}) }
+                    CompactButton { text: "Stop"; enabled: !!root.state.playing; onClicked: root.send({op: "stop"}) }
                     Ui.PanelSlider { id: volume; Layout.fillWidth: true; bar: root.bar; minimum: 0; maximum: 100; step: 1; integer: true; value: root.state.volume === undefined ? 70 : root.state.volume; onReleased: function(value) { root.send({op: "volume", value: Math.round(value)}) } }
                     Text { text: Math.round(volume.liveValue) + "%"; color: Color.foreground; font.pixelSize: 12 }
                 }
@@ -150,7 +176,28 @@ Ui.BarWidget {
                 }
                 Text { visible: root.channels.length === 0; text: "No channels match."; color: Color.muted }
             }
-            Item { visible: !root.state.connected; Layout.fillHeight: true }
+            ColumnLayout {
+                visible: root.aboutOpen
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: Style.space(8)
+                Text {
+                    text: "From: The Rathole"
+                    textFormat: Text.PlainText
+                    color: Color.foreground
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
+                }
+                Text {
+                    text: "By: Vandrare"
+                    textFormat: Text.PlainText
+                    color: Color.foreground
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
+                }
+                Item { Layout.fillHeight: true }
+            }
+            Item { visible: !root.state.connected && !root.aboutOpen; Layout.fillHeight: true }
         }
     }
 }
