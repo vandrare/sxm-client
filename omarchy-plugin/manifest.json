@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "local.siriusxm",
+  "name": "SiriusXM",
+  "version": "0.1.0",
+  "author": "Scott",
+  "license": "MIT",
+  "description": "SiriusXM channels, favorites and playback with desktop keyring login",
+  "kinds": ["service", "bar-widget"],
+  "keepLoaded": true,
+  "entryPoints": {"service": "Service.qml", "barWidget": "Widget.qml"},
+  "barWidget": {
+    "displayName": "SiriusXM",
+    "description": "SiriusXM radio and now playing",
+    "category": "Media",
+    "allowMultiple": false,
+    "defaultSection": "left"
+  }
+}
